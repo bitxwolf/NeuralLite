@@ -39,7 +39,7 @@
 |----------------|-----------------------------|---------------|
 | Android (ARM64) | ≥ 4GB RAM, Android 10+      | ✅ Comming soon  |
 | Windows (x64)   | ≥ 4GB RAM, Python 3.10+     | ✅ Comming soon  |
-| iPad (iOS)      | Requires sideload / dev env | ⚠️ BETA |
+| iPad (iOS)      | Requires Vibecode App | ⚠️ BETA |
 
 ---
 
