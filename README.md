@@ -89,7 +89,6 @@ The **final version** will be released soon with all planned features fully poli
 
 ## 🚀 Future Plans
 
-- iOS sideloadable build
 - Plugin SDK (for community-built modules)
 - Offline dictionary, translator, and weather modules
 - Custom TTS voice cloning
