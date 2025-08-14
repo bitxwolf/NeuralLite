@@ -45,15 +45,23 @@
 
 ## 📦 Installation Guide
 
-### 📱 Android (via APK)
+### # NeuraLite (Beta)
 
-1. [Download the APK](#) (coming soon)
-2. Enable **Unknown Sources** in your device settings
-3. Install the app
-4. Grant mic, storage, and location permissions
-5. Start using offline
+NeuraLite is currently in **beta**. This is a testing build for iOS and iPadOS users — expect bugs, glitches, and occasional AI mood swings.  
+The **final version** will be released soon with all planned features fully polished.
 
-> 💡 To save space, use **Model Toggle Mode** to disable unused AI modules (e.g. only enable LLMs when coding).
+---
+
+## 📥 Download (iOS / iPadOS)
+**Open in Vibecode**:  
+[https://www.vibecodeapp.com/projects/84e35c5f-51ac-405e-95b0-f50a18e3bc2d](https://www.vibecodeapp.com/projects/84e35c5f-51ac-405e-95b0-f50a18e3bc2d)]
+(runs only when "vibecode" installed from App store)
+---
+
+## ⚠️ Notes
+- This is an early preview build — functionality may change.
+- Performance and stability improvements are coming in the final version.
+- Feedback is welcome to help shape the final release.
 
 ---
 
