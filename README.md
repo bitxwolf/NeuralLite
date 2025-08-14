@@ -104,7 +104,7 @@ MIT License © 2025 — NeuraLite Core Team
 ## 👥 Contributors
 
 - **BitWolf** — Vision, specs, testing
-- **ChatGPT-4o** — Architecture, design, LLM integration
+- **Vibecode** — Architecture, design, LLM integration
 - **Open Source Community** — Piper, Whisper, Mistral, OSM
 
 ---
