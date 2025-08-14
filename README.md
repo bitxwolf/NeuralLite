@@ -37,9 +37,9 @@
 
 | Platform        | Specs                      | Status        |
 |----------------|-----------------------------|---------------|
-| Android (ARM64) | ≥ 4GB RAM, Android 10+      | ✅ Supported  |
-| Windows (x64)   | ≥ 4GB RAM, Python 3.10+     | ✅ Supported  |
-| iPad (iOS)      | Requires sideload / dev env | ⚠️ Experimental |
+| Android (ARM64) | ≥ 4GB RAM, Android 10+      | ✅ Comming soon  |
+| Windows (x64)   | ≥ 4GB RAM, Python 3.10+     | ✅ Comming soon  |
+| iPad (iOS)      | Requires sideload / dev env | ⚠️ BETA |
 
 ---
 
