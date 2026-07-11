@@ -1,0 +1,11 @@
+# ninja log v5
+98	1146	8053756079583958	CMakeFiles/llama_android.dir/llama/ggml-alloc.c.o	18e545243f999473
+1	1624	8053756084416182	CMakeFiles/llama_android.dir/llama/ggml-backend.c.o	8d9fbabbd5a6ead0
+214	2755	8053756095169807	CMakeFiles/llama_android.dir/llama_bridge.cpp.o	789ce83189e63ec2
+193	2793	8053756095845459	CMakeFiles/llama_android.dir/llama/sgemm.cpp.o	78053a8aca4168ab
+72	30280	8053756370617496	CMakeFiles/llama_android.dir/llama/ggml-quants.c.o	4228a16032e816c1
+154	34234	8053756410335987	CMakeFiles/llama_android.dir/llama/unicode-data.cpp.o	cba1d1fd6586dd9e
+119	35889	8053756426666824	CMakeFiles/llama_android.dir/llama/unicode.cpp.o	c1b0d8b1389d1d1d
+227	42085	8053756488727986	CMakeFiles/llama_android.dir/llama/ggml.c.o	b07c5284979cde75
+178	90976	8053756976765526	CMakeFiles/llama_android.dir/llama/llama.cpp.o	2894805e98ae2144
+90979	91320	8053756980836393	C:/crimemind/neauralite/app/build/intermediates/cxx/Release/2stu3h6n/obj/arm64-v8a/libllama_android.so	47745ed4c190e420

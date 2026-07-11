@@ -1,0 +1,47 @@
+[
+{
+  "directory": "C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a",
+  "command": "C:\\Users\\vantr\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android29 --sysroot=C:/Users/vantr/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dllama_android_EXPORTS -IC:/crimemind/neauralite/app/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O3 -DNDEBUG  -fPIC -O3 -DNDEBUG -DGGML_USE_CPU -DGGML_NO_METAL=1 -DGGML_NO_CUDA=1 -DGGML_NO_OPENMP=1 -pthread -o CMakeFiles\\llama_android.dir\\llama_bridge.cpp.o -c C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama_bridge.cpp",
+  "file": "C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama_bridge.cpp"
+},
+{
+  "directory": "C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a",
+  "command": "C:\\Users\\vantr\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android29 --sysroot=C:/Users/vantr/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dllama_android_EXPORTS -IC:/crimemind/neauralite/app/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O3 -DNDEBUG  -fPIC -O3 -DNDEBUG -DGGML_USE_CPU -DGGML_NO_METAL=1 -DGGML_NO_CUDA=1 -DGGML_NO_OPENMP=1 -pthread -o CMakeFiles\\llama_android.dir\\llama\\ggml.c.o -c C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\ggml.c",
+  "file": "C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\ggml.c"
+},
+{
+  "directory": "C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a",
+  "command": "C:\\Users\\vantr\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android29 --sysroot=C:/Users/vantr/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dllama_android_EXPORTS -IC:/crimemind/neauralite/app/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O3 -DNDEBUG  -fPIC -O3 -DNDEBUG -DGGML_USE_CPU -DGGML_NO_METAL=1 -DGGML_NO_CUDA=1 -DGGML_NO_OPENMP=1 -pthread -o CMakeFiles\\llama_android.dir\\llama\\ggml-alloc.c.o -c C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\ggml-alloc.c",
+  "file": "C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\ggml-alloc.c"
+},
+{
+  "directory": "C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a",
+  "command": "C:\\Users\\vantr\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android29 --sysroot=C:/Users/vantr/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dllama_android_EXPORTS -IC:/crimemind/neauralite/app/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O3 -DNDEBUG  -fPIC -O3 -DNDEBUG -DGGML_USE_CPU -DGGML_NO_METAL=1 -DGGML_NO_CUDA=1 -DGGML_NO_OPENMP=1 -pthread -o CMakeFiles\\llama_android.dir\\llama\\ggml-backend.c.o -c C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\ggml-backend.c",
+  "file": "C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\ggml-backend.c"
+},
+{
+  "directory": "C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a",
+  "command": "C:\\Users\\vantr\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android29 --sysroot=C:/Users/vantr/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dllama_android_EXPORTS -IC:/crimemind/neauralite/app/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O3 -DNDEBUG  -fPIC -O3 -DNDEBUG -DGGML_USE_CPU -DGGML_NO_METAL=1 -DGGML_NO_CUDA=1 -DGGML_NO_OPENMP=1 -pthread -o CMakeFiles\\llama_android.dir\\llama\\ggml-quants.c.o -c C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\ggml-quants.c",
+  "file": "C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\ggml-quants.c"
+},
+{
+  "directory": "C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a",
+  "command": "C:\\Users\\vantr\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android29 --sysroot=C:/Users/vantr/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dllama_android_EXPORTS -IC:/crimemind/neauralite/app/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O3 -DNDEBUG  -fPIC -O3 -DNDEBUG -DGGML_USE_CPU -DGGML_NO_METAL=1 -DGGML_NO_CUDA=1 -DGGML_NO_OPENMP=1 -pthread -o CMakeFiles\\llama_android.dir\\llama\\llama.cpp.o -c C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\llama.cpp",
+  "file": "C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\llama.cpp"
+},
+{
+  "directory": "C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a",
+  "command": "C:\\Users\\vantr\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android29 --sysroot=C:/Users/vantr/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dllama_android_EXPORTS -IC:/crimemind/neauralite/app/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O3 -DNDEBUG  -fPIC -O3 -DNDEBUG -DGGML_USE_CPU -DGGML_NO_METAL=1 -DGGML_NO_CUDA=1 -DGGML_NO_OPENMP=1 -pthread -o CMakeFiles\\llama_android.dir\\llama\\unicode.cpp.o -c C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\unicode.cpp",
+  "file": "C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\unicode.cpp"
+},
+{
+  "directory": "C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a",
+  "command": "C:\\Users\\vantr\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android29 --sysroot=C:/Users/vantr/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dllama_android_EXPORTS -IC:/crimemind/neauralite/app/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O3 -DNDEBUG  -fPIC -O3 -DNDEBUG -DGGML_USE_CPU -DGGML_NO_METAL=1 -DGGML_NO_CUDA=1 -DGGML_NO_OPENMP=1 -pthread -o CMakeFiles\\llama_android.dir\\llama\\unicode-data.cpp.o -c C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\unicode-data.cpp",
+  "file": "C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\unicode-data.cpp"
+},
+{
+  "directory": "C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a",
+  "command": "C:\\Users\\vantr\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android29 --sysroot=C:/Users/vantr/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dllama_android_EXPORTS -IC:/crimemind/neauralite/app/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O3 -DNDEBUG  -fPIC -O3 -DNDEBUG -DGGML_USE_CPU -DGGML_NO_METAL=1 -DGGML_NO_CUDA=1 -DGGML_NO_OPENMP=1 -pthread -o CMakeFiles\\llama_android.dir\\llama\\sgemm.cpp.o -c C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\sgemm.cpp",
+  "file": "C:\\crimemind\\neauralite\\app\\src\\main\\cpp\\llama\\sgemm.cpp"
+}
+]

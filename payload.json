@@ -1,0 +1,4 @@
+{
+  "model": "tinyllama-1.1b-chat-v1.0",
+  "messages": [{"role": "user", "content": "Hello, how are you?"}]
+}

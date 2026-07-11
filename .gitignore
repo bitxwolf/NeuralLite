@@ -1,0 +1,15 @@
+*.apk
+!NeuralLite.apk
+*.gguf
+msjdk/
+app/build/
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+screen*.png
+window_dump.xml
+jdk*/
+*.gguf
+*.zip

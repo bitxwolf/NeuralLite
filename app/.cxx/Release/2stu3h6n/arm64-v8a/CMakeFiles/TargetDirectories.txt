@@ -1,0 +1,3 @@
+C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a/CMakeFiles/llama_android.dir
+C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/crimemind/neauralite/app/.cxx/Release/2stu3h6n/arm64-v8a/CMakeFiles/rebuild_cache.dir
