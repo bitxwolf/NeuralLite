@@ -1,10 +1,9 @@
 package com.neurallite.app.server
 
+import java.util.UUID
+
 /**
- * Events emitted by [NeuralliteServer] for UI observation.
- *
- * Collected via [NeuralliteServer.events] SharedFlow and forwarded
- * to the ViewModel layer for display in the Server tab.
+ * Events emitted by [NeuralliteServer] and [NeuralliteServerService] for UI observation.
  */
 sealed class ServerEvent {
     data class RequestReceived(
@@ -14,10 +13,13 @@ sealed class ServerEvent {
     ) : ServerEvent()
 
     data class RequestCompleted(
+        val id: String = UUID.randomUUID().toString(),
+        val method: String,
         val path: String,
         val statusCode: Int,
         val durationMs: Long,
-        val tokensGenerated: Int = 0
+        val tokensGenerated: Int = 0,
+        val timestampMs: Long = System.currentTimeMillis()
     ) : ServerEvent()
 
     object ServerStarted : ServerEvent()

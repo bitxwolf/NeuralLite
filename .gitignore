@@ -3,6 +3,7 @@
 *.gguf
 msjdk/
 app/build/
+app/.cxx/
 .gradle/
 build/
 local.properties

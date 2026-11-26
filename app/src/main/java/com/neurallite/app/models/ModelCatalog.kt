@@ -1,19 +1,168 @@
 package com.neurallite.app.models
 
 /**
+ * A single OpenAI-style chat message used for prompt formatting.
+ */
+data class ChatMessage(
+    val role: String,
+    val content: String
+)
+
+/**
+ * Chat formatting templates matching the models in [ModelCatalog].
+ */
+enum class PromptTemplate(
+    val stopStrings: List<String>,
+    val parseSpecial: Boolean
+) {
+    ZEPHYR(
+        stopStrings = listOf("</s>", "<|user|>", "<|system|>"),
+        parseSpecial = true
+    ) {
+        override fun formatChat(messages: List<ChatMessage>): String {
+            val sb = StringBuilder()
+            for (msg in messages) {
+                val role = when (val raw = msg.role.lowercase().ifBlank { "user" }) {
+                    "developer" -> "system"
+                    else -> raw
+                }
+                sb.append("<|").append(role).append("|>\n")
+                    .append(msg.content).append("</s>\n")
+            }
+            sb.append("<|assistant|>\n")
+            return sb.toString()
+        }
+    },
+
+    PHI2(
+        stopStrings = listOf("\nInstruct:", "Instruct:", "<|endoftext|>"),
+        parseSpecial = false
+    ) {
+        override fun formatChat(messages: List<ChatMessage>): String {
+            val sb = StringBuilder()
+            for (msg in messages) {
+                when (msg.role.lowercase()) {
+                    "system", "developer" -> sb.append("System: ").append(msg.content).append("\n")
+                    "assistant" -> sb.append("Output: ").append(msg.content).append("\n")
+                    else -> sb.append("Instruct: ").append(msg.content).append("\n")
+                }
+            }
+            sb.append("Output:")
+            return sb.toString()
+        }
+    },
+
+    GEMMA(
+        stopStrings = listOf("<end_of_turn>", "<start_of_turn>"),
+        parseSpecial = true
+    ) {
+        override fun formatChat(messages: List<ChatMessage>): String {
+            val pendingSystem = StringBuilder()
+            val sb = StringBuilder()
+            for (msg in messages) {
+                when (msg.role.lowercase()) {
+                    "system", "developer" -> {
+                        if (pendingSystem.isNotEmpty()) pendingSystem.append("\n")
+                        pendingSystem.append(msg.content)
+                    }
+                    "assistant", "model" -> {
+                        if (pendingSystem.isNotEmpty()) {
+                            sb.append("<start_of_turn>user\n")
+                                .append(pendingSystem)
+                                .append("<end_of_turn>\n")
+                            pendingSystem.clear()
+                        }
+                        sb.append("<start_of_turn>model\n")
+                            .append(msg.content)
+                            .append("<end_of_turn>\n")
+                    }
+                    else -> {
+                        val content = if (pendingSystem.isNotEmpty()) {
+                            val merged = "$pendingSystem\n\n${msg.content}"
+                            pendingSystem.clear()
+                            merged
+                        } else {
+                            msg.content
+                        }
+                        sb.append("<start_of_turn>user\n")
+                            .append(content)
+                            .append("<end_of_turn>\n")
+                    }
+                }
+            }
+            if (pendingSystem.isNotEmpty()) {
+                sb.append("<start_of_turn>user\n")
+                    .append(pendingSystem)
+                    .append("<end_of_turn>\n")
+            }
+            sb.append("<start_of_turn>model\n")
+            return sb.toString()
+        }
+    },
+
+    MISTRAL_V1(
+        stopStrings = listOf("</s>", "[INST]"),
+        parseSpecial = true
+    ) {
+        override fun formatChat(messages: List<ChatMessage>): String {
+            val pendingSystem = StringBuilder()
+            val sb = StringBuilder()
+            for (msg in messages) {
+                when (msg.role.lowercase()) {
+                    "system", "developer" -> {
+                        if (pendingSystem.isNotEmpty()) pendingSystem.append("\n")
+                        pendingSystem.append(msg.content)
+                    }
+                    "assistant" -> {
+                        if (pendingSystem.isNotEmpty()) {
+                            sb.append("[INST] ").append(pendingSystem).append(" [/INST]")
+                            pendingSystem.clear()
+                        }
+                        sb.append(msg.content).append("</s>")
+                    }
+                    else -> {
+                        val content = if (pendingSystem.isNotEmpty()) {
+                            val merged = "$pendingSystem\n\n${msg.content}"
+                            pendingSystem.clear()
+                            merged
+                        } else {
+                            msg.content
+                        }
+                        sb.append("[INST] ").append(content).append(" [/INST]")
+                    }
+                }
+            }
+            if (pendingSystem.isNotEmpty()) {
+                sb.append("[INST] ").append(pendingSystem).append(" [/INST]")
+            }
+            return sb.toString()
+        }
+    },
+
+    LLAMA3(
+        stopStrings = listOf("<|eot_id|>", "<|end_of_text|>"),
+        parseSpecial = true
+    ) {
+        override fun formatChat(messages: List<ChatMessage>): String {
+            val sb = StringBuilder()
+            for (msg in messages) {
+                val role = when (val raw = msg.role.lowercase().ifBlank { "user" }) {
+                    "developer" -> "system"
+                    else -> raw
+                }
+                sb.append("<|start_header_id|>").append(role).append("<|end_header_id|>\n\n")
+                    .append(msg.content).append("<|eot_id|>")
+            }
+            sb.append("<|start_header_id|>assistant<|end_header_id|>\n\n")
+            return sb.toString()
+        }
+    };
+
+    abstract fun formatChat(messages: List<ChatMessage>): String
+}
+
+/**
  * Metadata for a single on-device LLM model.
- *
- * @property id                  Unique slug used as key everywhere.
- * @property displayName         Human-readable name for the UI.
- * @property parameterSize       Model parameter count label (e.g. "7B").
- * @property quantization        GGUF quantization method (e.g. "Q4_K_M").
- * @property fileSizeGB          Approximate GGUF file size in gigabytes.
- * @property ramRequiredGB       Minimum device RAM to run comfortably.
- * @property estimatedTokensPerSec Ballpark tok/s on the recommended tier.
- * @property huggingFaceDirectUrl Direct download URL for the GGUF blob.
- * @property recommendedForTiers  Device tiers (1–4) this model suits.
- * @property tags                Searchable tags ("chat", "code", …).
- * @property contextLength       Maximum context window in tokens.
  */
 data class ModelInfo(
     val id: String,
@@ -26,14 +175,12 @@ data class ModelInfo(
     val huggingFaceDirectUrl: String,
     val recommendedForTiers: List<Int>,
     val tags: List<String>,
-    val contextLength: Int
+    val contextLength: Int,
+    val promptTemplate: PromptTemplate = PromptTemplate.ZEPHYR
 )
 
 /**
  * Hard-coded catalog of supported on-device models.
- *
- * Every entry points to a publicly-hosted GGUF file on HuggingFace.
- * The catalog is intentionally immutable — no runtime mutations.
  */
 object ModelCatalog {
 
@@ -50,7 +197,8 @@ object ModelCatalog {
             huggingFaceDirectUrl = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q8_0.gguf",
             recommendedForTiers = listOf(4, 3),
             tags = listOf("ultra-light", "chat"),
-            contextLength = 2048
+            contextLength = 2048,
+            promptTemplate = PromptTemplate.ZEPHYR
         ),
 
         // ── Tier 3 / 2 — Lightweight ───────────────────────────────────────
@@ -65,7 +213,8 @@ object ModelCatalog {
             huggingFaceDirectUrl = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
             recommendedForTiers = listOf(3, 2),
             tags = listOf("chat", "code", "instruct"),
-            contextLength = 2048
+            contextLength = 2048,
+            promptTemplate = PromptTemplate.PHI2
         ),
         ModelInfo(
             id = "gemma2b_q4ks",
@@ -75,10 +224,11 @@ object ModelCatalog {
             fileSizeGB = 1.3,
             ramRequiredGB = 2.5,
             estimatedTokensPerSec = 15,
-            huggingFaceDirectUrl = "https://huggingface.co/TheBloke/gemma-2b-it-GGUF/resolve/main/gemma-2b-it.Q4_K_S.gguf",
+            huggingFaceDirectUrl = "https://huggingface.co/MaziyarPanahi/gemma-2b-it-GGUF/resolve/main/gemma-2b-it.Q4_K_S.gguf",
             recommendedForTiers = listOf(3, 2),
             tags = listOf("instruct", "chat"),
-            contextLength = 4096
+            contextLength = 4096,
+            promptTemplate = PromptTemplate.GEMMA
         ),
 
         // ── Tier 1 / 2 — Powerful ──────────────────────────────────────────
@@ -93,7 +243,8 @@ object ModelCatalog {
             huggingFaceDirectUrl = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q3_K_M.gguf",
             recommendedForTiers = listOf(1, 2),
             tags = listOf("instruct", "chat", "powerful"),
-            contextLength = 8192
+            contextLength = 8192,
+            promptTemplate = PromptTemplate.MISTRAL_V1
         ),
 
         // ── Tier 1 — Flagship only ─────────────────────────────────────────
@@ -108,34 +259,20 @@ object ModelCatalog {
             huggingFaceDirectUrl = "https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
             recommendedForTiers = listOf(1),
             tags = listOf("instruct", "chat", "powerful"),
-            contextLength = 8192
+            contextLength = 8192,
+            promptTemplate = PromptTemplate.LLAMA3
         )
     )
 
     // ── Helper functions ────────────────────────────────────────────────────
 
-    /**
-     * Returns models whose [ModelInfo.recommendedForTiers] list contains
-     * the given [tier], ordered by descending estimated tok/s.
-     */
     fun getRecommendedModels(tier: Int): List<ModelInfo> =
         models.filter { tier in it.recommendedForTiers }
             .sortedByDescending { it.estimatedTokensPerSec }
 
-    /**
-     * Look up a single model by its unique [id], or `null` if not found.
-     */
     fun getModelById(id: String): ModelInfo? =
         models.firstOrNull { it.id == id }
 
-    /**
-     * Extracts the GGUF filename from the model's HuggingFace URL.
-     *
-     * For example:
-     * ```
-     * "https://…/tinyllama-1.1b-chat-v1.0.Q8_0.gguf" → "tinyllama-1.1b-chat-v1.0.Q8_0.gguf"
-     * ```
-     */
     fun getFileName(model: ModelInfo): String =
         model.huggingFaceDirectUrl.substringAfterLast('/')
 }

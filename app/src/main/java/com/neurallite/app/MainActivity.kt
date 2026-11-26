@@ -1,21 +1,31 @@
 package com.neurallite.app
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.*
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -27,10 +37,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.neurallite.app.ui.screens.ConfigScreen
 import com.neurallite.app.ui.screens.DetectScreen
 import com.neurallite.app.ui.screens.ModelsScreen
 import com.neurallite.app.ui.screens.ServerScreen
-import com.neurallite.app.ui.screens.ConfigScreen
 import com.neurallite.app.ui.theme.NeuralliteTheme
 import com.neurallite.app.viewmodel.NeuralliteViewModel
 
@@ -53,7 +63,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
         setContent {
             NeuralliteTheme {
                 MainAppScreen()
@@ -113,7 +126,10 @@ fun MainAppScreen(viewModel: NeuralliteViewModel = viewModel()) {
         NavHost(
             navController = navController,
             startDestination = Screen.Detect.route,
-            modifier = Modifier.padding(innerPadding).fillMaxSize()
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .fillMaxSize()
         ) {
             composable(Screen.Detect.route) { DetectScreen(viewModel = viewModel) }
             composable(Screen.Models.route) { ModelsScreen(viewModel = viewModel) }

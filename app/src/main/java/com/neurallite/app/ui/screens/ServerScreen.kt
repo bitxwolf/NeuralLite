@@ -1,21 +1,67 @@
 package com.neurallite.app.ui.screens
 
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.animation.core.*
+import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.EaseInOutCubic
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Http
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,63 +72,61 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.neurallite.app.models.ModelCatalog
-import com.neurallite.app.server.ServerEvent
 import com.neurallite.app.ui.components.MetricCard
 import com.neurallite.app.ui.components.RequestLogRow
 import com.neurallite.app.viewmodel.NeuralliteViewModel
-import java.text.SimpleDateFormat
-import java.util.*
 
-private val Accent  = Color(0xFF00E5FF)
+private val Accent = Color(0xFF00E5FF)
 private val Success = Color(0xFF00E676)
-private val Error   = Color(0xFFFF5252)
+private val Error = Color(0xFFFF5252)
 
 @Composable
 fun ServerScreen(viewModel: NeuralliteViewModel) {
     val context = LocalContext.current
     val serverRunning by viewModel.serverRunning.collectAsState()
     val activeModelId by viewModel.activeModelId.collectAsState()
-    val serverEvents  by viewModel.serverEvents.collectAsState()
+    val visibleLogs by viewModel.serverEvents.collectAsState()
+    val totalRequests by viewModel.totalRequests.collectAsState()
+    val avgTokPerSec by viewModel.avgTokPerSec.collectAsState()
+    val isInferring by viewModel.isInferring.collectAsState()
+    val apiToken by viewModel.apiToken.collectAsState()
+    val lanIp by viewModel.lanIp.collectAsState()
+    val activePort by viewModel.activePort.collectAsState()
+    val serverError by viewModel.serverError.collectAsState()
+    val config by viewModel.config.collectAsState()
 
-    var tokenVisible by remember { mutableStateOf(false) }
-    var showRegenerateDialog by remember { mutableStateOf(false) }
+    var tokenVisible by rememberSaveable { mutableStateOf(false) }
+    var showRegenerateDialog by rememberSaveable { mutableStateOf(false) }
 
-    // Pulse animation for running state
-    val infiniteTransition = rememberInfiniteTransition(label = "serverPulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "serverPulseScale"
-    )
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) {
+        viewModel.startServer(context)
+    }
 
-    // Compute metrics
-    val completedEvents = serverEvents.filterIsInstance<ServerEvent.RequestCompleted>()
-    val totalRequests = completedEvents.size
-    val avgTokPerSec = if (completedEvents.isNotEmpty()) {
-        completedEvents.sumOf { it.tokensGenerated }.toFloat() /
-            completedEvents.sumOf { it.durationMs.coerceAtLeast(1) }.toFloat() * 1000f
-    } else 0f
+    LaunchedEffect(Unit) {
+        viewModel.refreshLanIp()
+    }
 
     val activeModelName = activeModelId?.let { ModelCatalog.getModelById(it)?.displayName } ?: "None"
-
-    // Real token from EncryptedSharedPreferences
-    val apiToken by viewModel.apiToken.collectAsState()
+    val displayPort = if (serverRunning) activePort else config.serverPort
 
     val listState = rememberLazyListState()
+    var lastScrolledEventId by remember { mutableStateOf(visibleLogs.lastOrNull()?.id) }
 
-    // Auto-scroll to bottom on new events
-    LaunchedEffect(serverEvents.size) {
-        if (serverEvents.isNotEmpty()) {
-            listState.animateScrollToItem(serverEvents.size - 1)
+    LaunchedEffect(visibleLogs.lastOrNull()?.id, serverError) {
+        val newestId = visibleLogs.lastOrNull()?.id
+        if (newestId != null && newestId != lastScrolledEventId) {
+            lastScrolledEventId = newestId
+            val headerCount = 5 + if (serverError != null) 1 else 0
+            listState.animateScrollToItem(headerCount + visibleLogs.size - 1)
         }
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -98,6 +142,17 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     if (serverRunning) {
+                        val infiniteTransition = rememberInfiniteTransition(label = "serverPulse")
+                        val pulseScale by infiniteTransition.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 1.1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(1000, easing = EaseInOutCubic),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "serverPulseScale"
+                        )
+
                         Box(
                             modifier = Modifier
                                 .size(120.dp)
@@ -109,20 +164,33 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
 
                     Button(
                         onClick = {
-                            if (serverRunning) viewModel.stopServer(context)
-                            else viewModel.startServer(context)
+                            if (serverRunning) {
+                                viewModel.stopServer(context)
+                            } else {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                    ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    ) != PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    viewModel.startServer(context)
+                                }
+                            }
                         },
                         modifier = Modifier.size(100.dp),
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (serverRunning) Success else Color.White.copy(alpha = 0.15f)
+                            containerColor = if (serverRunning) Success else Color.White.copy(alpha = 0.15f),
+                            contentColor = if (serverRunning) MaterialTheme.colorScheme.onSecondary else Accent
                         )
                     ) {
                         Icon(
                             imageVector = if (serverRunning) Icons.Filled.Stop else Icons.Filled.PlayArrow,
                             contentDescription = if (serverRunning) "Stop" else "Start",
                             modifier = Modifier.size(40.dp),
-                            tint = if (serverRunning) Color.White else Accent
+                            tint = if (serverRunning) MaterialTheme.colorScheme.onSecondary else Accent
                         )
                     }
                 }
@@ -133,14 +201,57 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
                     text = if (serverRunning) "Server Running" else "Server Stopped",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (serverRunning) Success else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                    color = if (serverRunning) Success else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Text(
                     text = "Model: $activeModelName",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                if (isInferring) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    TextButton(onClick = { viewModel.stopInference() }) {
+                        Text(
+                            text = "Stop Active Inference",
+                            color = Error,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── Server Error Banner ──────────────────────────────────────────────
+        serverError?.let { err ->
+            item {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Error.copy(alpha = 0.14f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(start = 12.dp, top = 6.dp, bottom = 6.dp, end = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = err,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Error,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { viewModel.clearServerError() }) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Dismiss error",
+                                tint = Error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -162,7 +273,7 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
 
                     EndpointRow(
                         label = "Local",
-                        url = "http://localhost:8080/v1",
+                        url = "http://localhost:$displayPort/v1",
                         context = context
                     )
 
@@ -170,7 +281,7 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
 
                     EndpointRow(
                         label = "LAN",
-                        url = "http://192.168.1.x:8080/v1",
+                        url = "http://$lanIp:$displayPort/v1",
                         context = context
                     )
                 }
@@ -197,31 +308,42 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val tokenDisplay = when {
+                            apiToken.isBlank() -> "Generating…"
+                            tokenVisible -> apiToken
+                            else -> "•".repeat(24)
+                        }
                         Text(
-                            text = if (tokenVisible) apiToken else "•".repeat(32),
+                            text = tokenDisplay,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                fontFamily = FontFamily.Monospace
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp
                             ),
                             color = Accent,
                             modifier = Modifier.weight(1f)
                         )
 
-                        IconButton(onClick = { tokenVisible = !tokenVisible }) {
+                        IconButton(
+                            onClick = { tokenVisible = !tokenVisible },
+                            enabled = apiToken.isNotBlank()
+                        ) {
                             Icon(
                                 imageVector = if (tokenVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                                 contentDescription = "Toggle visibility",
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
-                        IconButton(onClick = {
-                            val clip = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clip.setPrimaryClip(ClipData.newPlainText("API Token", apiToken))
-                        }) {
+                        IconButton(
+                            onClick = {
+                                copyToClipboard(context, "API Token", apiToken)
+                            },
+                            enabled = apiToken.isNotBlank()
+                        ) {
                             Icon(
                                 imageVector = Icons.Filled.ContentCopy,
                                 contentDescription = "Copy",
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
@@ -229,7 +351,7 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
                             Icon(
                                 imageVector = Icons.Filled.Refresh,
                                 contentDescription = "Regenerate",
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -240,34 +362,52 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
         // ── Live Metrics ─────────────────────────────────────────────────────
         item {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 MetricCard(
                     title = "Requests",
                     value = "$totalRequests",
                     icon = Icons.Filled.Http,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
                 MetricCard(
                     title = "Avg tok/s",
                     value = "%.1f".format(avgTokPerSec),
                     icon = Icons.Filled.Speed,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
             }
         }
 
-        // ── Request Log ──────────────────────────────────────────────────────
+        // ── Request Log Header ───────────────────────────────────────────────
         item {
-            Text(
-                text = "Request Log",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Request Log",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.weight(1f)
+                )
+                if (visibleLogs.isNotEmpty()) {
+                    TextButton(onClick = { viewModel.clearServerEvents() }) {
+                        Text("Clear", color = Accent, fontSize = 12.sp)
+                    }
+                }
+            }
         }
 
-        if (completedEvents.isEmpty()) {
+        if (visibleLogs.isEmpty()) {
             item {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -277,19 +417,19 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
                     Text(
                         text = "No requests yet",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
             }
         } else {
-            items(completedEvents.takeLast(50)) { event ->
+            items(visibleLogs, key = { it.id }) { event ->
                 RequestLogRow(
-                    method = "POST",
+                    method = event.method,
                     path = event.path,
                     statusCode = event.statusCode,
                     durationMs = event.durationMs,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = event.timestampMs
                 )
             }
         }
@@ -302,9 +442,14 @@ fun ServerScreen(viewModel: NeuralliteViewModel) {
         AlertDialog(
             onDismissRequest = { showRegenerateDialog = false },
             title = { Text("Regenerate API Token") },
-            text = { Text("This will invalidate the current token. All connected clients will need to update their token.") },
+            text = {
+                Text("This will invalidate the current token. All connected clients will need to update their token.")
+            },
             confirmButton = {
-                TextButton(onClick = { showRegenerateDialog = false }) {
+                TextButton(onClick = {
+                    showRegenerateDialog = false
+                    viewModel.regenerateApiToken(context)
+                }) {
                     Text("Regenerate", color = Accent)
                 }
             },
@@ -325,18 +470,17 @@ private fun EndpointRow(label: String, url: String, context: Context) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .clickable {
-                val clip = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clip.setPrimaryClip(ClipData.newPlainText("Endpoint", url))
+                copyToClipboard(context, "Endpoint", url)
             }
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = url,
@@ -351,7 +495,13 @@ private fun EndpointRow(label: String, url: String, context: Context) {
             imageVector = Icons.Filled.ContentCopy,
             contentDescription = "Copy",
             modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+private fun copyToClipboard(context: Context, label: String, value: String) {
+    val clip = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clip.setPrimaryClip(ClipData.newPlainText(label, value))
+    Toast.makeText(context, "$label copied", Toast.LENGTH_SHORT).show()
 }

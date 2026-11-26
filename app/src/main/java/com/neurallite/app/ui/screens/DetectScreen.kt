@@ -1,19 +1,43 @@
 package com.neurallite.app.ui.screens
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.EaseInOutCubic
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Radar
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,42 +45,22 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neurallite.app.ui.components.MetricCard
 import com.neurallite.app.viewmodel.NeuralliteViewModel
 
-// Theme accent colours (matching NeuralliteTheme)
-private val Accent   = Color(0xFF00E5FF)
-private val Success  = Color(0xFF00E676)
-private val Warning  = Color(0xFFFFAB40)
-private val Error    = Color(0xFFFF5252)
+private val Accent = Color(0xFF00E5FF)
+private val Success = Color(0xFF00E676)
+private val Warning = Color(0xFFFFAB40)
+private val Error = Color(0xFFFF5252)
 
 @Composable
 fun DetectScreen(viewModel: NeuralliteViewModel) {
     val profile by viewModel.hardwareProfile.collectAsState()
-    var isScanning by remember { mutableStateOf(false) }
-
-    // Animated pulse for scan button
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseScale"
-    )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseAlpha"
-    )
+    val isScanning by viewModel.isScanning.collectAsState()
 
     Column(
         modifier = Modifier
@@ -66,7 +70,6 @@ fun DetectScreen(viewModel: NeuralliteViewModel) {
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ── Title ────────────────────────────────────────────────────────────
         Text(
             text = "Hardware Detection",
             style = MaterialTheme.typography.headlineMedium,
@@ -84,10 +87,28 @@ fun DetectScreen(viewModel: NeuralliteViewModel) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ── Scan Button ──────────────────────────────────────────────────────
         Box(contentAlignment = Alignment.Center) {
-            // Pulse ring behind button
             if (isScanning) {
+                val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                val pulseScale by infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 1.15f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(800, easing = EaseInOutCubic),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "pulseScale"
+                )
+                val pulseAlpha by infiniteTransition.animateFloat(
+                    initialValue = 0.6f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(800, easing = EaseInOutCubic),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "pulseAlpha"
+                )
+
                 Box(
                     modifier = Modifier
                         .size(140.dp)
@@ -98,27 +119,32 @@ fun DetectScreen(viewModel: NeuralliteViewModel) {
             }
 
             Button(
-                onClick = {
-                    isScanning = true
-                    viewModel.scanHardware()
-                },
+                onClick = { viewModel.scanHardware() },
+                enabled = !isScanning,
                 modifier = Modifier.size(120.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isScanning) Accent.copy(alpha = 0.3f) else Accent
+                    containerColor = if (isScanning) Accent.copy(alpha = 0.35f) else Accent,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = Accent.copy(alpha = 0.35f),
+                    disabledContentColor = MaterialTheme.colorScheme.onBackground
                 )
             ) {
                 Icon(
                     imageVector = Icons.Filled.Radar,
                     contentDescription = "Scan",
                     modifier = Modifier.size(40.dp),
-                    tint = Color.White
+                    tint = if (isScanning) {
+                        MaterialTheme.colorScheme.onBackground
+                    } else {
+                        MaterialTheme.colorScheme.onPrimary
+                    }
                 )
             }
         }
 
         Text(
-            text = if (isScanning && profile == null) "Scanning…" else "Run Hardware Scan",
+            text = if (isScanning) "Scanning…" else "Run Hardware Scan",
             style = MaterialTheme.typography.labelLarge,
             color = Accent,
             modifier = Modifier.padding(top = 8.dp)
@@ -126,10 +152,7 @@ fun DetectScreen(viewModel: NeuralliteViewModel) {
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // ── Tier Badge ───────────────────────────────────────────────────────
         profile?.let { hw ->
-            LaunchedEffect(hw) { isScanning = false }
-
             val tierColor = when (hw.tier) {
                 1 -> Success
                 2 -> Accent
@@ -170,48 +193,58 @@ fun DetectScreen(viewModel: NeuralliteViewModel) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ── Metric Cards Grid ────────────────────────────────────────────
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 MetricCard(
                     title = "Total RAM",
                     value = "%.1f GB".format(hw.totalRamBytes / 1_073_741_824.0),
                     icon = Icons.Filled.Memory,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
                 MetricCard(
                     title = "CPU Cores",
                     value = "${hw.cpuCores}",
                     icon = Icons.Filled.Speed,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 MetricCard(
                     title = "GPU",
-                    value = hw.gpuRenderer.take(20),
+                    value = hw.gpuRenderer,
                     icon = Icons.Filled.Memory,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
                 MetricCard(
                     title = "Free Storage",
                     value = "%.1f GB".format(hw.freeStorageBytes / 1_073_741_824.0),
                     icon = Icons.Filled.Storage,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Capability Bar ───────────────────────────────────────────────
             Text(
                 text = "Model Capability Range",
                 style = MaterialTheme.typography.titleSmall,
@@ -224,7 +257,6 @@ fun DetectScreen(viewModel: NeuralliteViewModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Extra info ───────────────────────────────────────────────────
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surface,
@@ -246,18 +278,22 @@ private fun InfoRow(label: String, value: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.5f)
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(0.5f)
         )
     }
 }
@@ -277,7 +313,6 @@ private fun CapabilityBar(tier: Int) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Progress track
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -306,10 +341,9 @@ private fun CapabilityBar(tier: Int) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Model markers
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 models.forEach { (name, reqTier) ->
                     val reachable = tier <= reqTier
@@ -317,7 +351,11 @@ private fun CapabilityBar(tier: Int) {
                         text = name,
                         fontSize = 10.sp,
                         fontWeight = if (reachable) FontWeight.Bold else FontWeight.Normal,
-                        color = if (reachable) Accent else Color.White.copy(alpha = 0.3f)
+                        color = if (reachable) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }

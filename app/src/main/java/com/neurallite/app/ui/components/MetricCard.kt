@@ -16,21 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neurallite.app.ui.theme.NeuralliteColors
 
 /**
  * A compact metric display card used throughout the Neurallite dashboard.
- *
- * Renders a dark surface card with an accent-colored icon, a muted title label,
- * and a prominently styled value. Ideal for showing stats like token throughput,
- * active connections, or memory usage at a glance.
- *
- * @param title  Descriptive label shown in small muted text (e.g. "Tokens/sec").
- * @param value  The metric value rendered in large accent-colored bold text.
- * @param icon   Leading [ImageVector] icon rendered in accent color.
- * @param modifier Optional [Modifier] applied to the outer card container.
  */
 @Composable
 fun MetricCard(
@@ -67,15 +59,21 @@ fun MetricCard(
                 text = title,
                 fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
+            val isLongValue = value.length > 12
             Text(
                 text = value,
-                fontSize = 22.sp,
+                fontSize = if (isLongValue) 14.sp else 20.sp,
+                lineHeight = if (isLongValue) 18.sp else 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = NeuralliteColors.accent,
+                maxLines = if (isLongValue) 2 else 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

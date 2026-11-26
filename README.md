@@ -1,428 +1,276 @@
 <div align="center">
   <img src="logo.png" alt="NeuralLite Logo" width="160"/>
   <h1>NeuralLite</h1>
-  <p><strong>Turn your Android phone into a private, local AI server.</strong></p>
-  <p>Run quantized LLMs on-device and expose an OpenAI-compatible REST API over Wi-Fi — no cloud, no fees, no data leaving your phone.</p>
+  <p><strong>Turn your Android device into a private, local OpenAI-compatible AI inference server.</strong></p>
+  <p>Run quantized GGUF models directly on-device via <code>llama.cpp</code> and serve standard REST &amp; SSE streaming APIs over your local Wi-Fi network — zero cloud dependency, zero API fees, and zero telemetry leaving your device.</p>
 
   <br/>
 
-  ![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)
-  ![llama.cpp](https://img.shields.io/badge/Powered%20by-llama.cpp-00E5FF)
+  ![Android](https://img.shields.io/badge/Android-8.0%2B%20(API%2026)-3DDC84?logo=android&logoColor=white)
+  ![llama.cpp](https://img.shields.io/badge/Powered%20by-llama.cpp%20b3248-00E5FF)
   ![API](https://img.shields.io/badge/API-OpenAI%20Compatible-00E676)
-  ![License](https://img.shields.io/badge/License-MIT-blue)
+  ![Kotlin](https://img.shields.io/badge/Kotlin-2.0%20%C2%B7%20Jetpack%20Compose-7F52FF)
 </div>
 
 ---
 
 ## Table of Contents
 
-- [What is NeuralLite?](#what-is-neurallite)
+- [Overview](#overview)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
-- [The Local AI Server](#-the-local-ai-server)
-  - [How it works](#how-it-works)
-  - [API Reference](#api-reference)
-  - [Connecting from a PC / Script / Other App](#connecting-from-a-pc--script--other-app)
-- [On-Device LLM Engine](#-on-device-llm-engine)
-- [Hardware Detection & Tier System](#-hardware-detection--tier-system)
-- [Model Catalog](#-model-catalog)
-- [App Screens](#-app-screens)
+- [Hardware Detection & Tier System](#hardware-detection--tier-system)
+- [Model Catalog & Lifecycle](#model-catalog--lifecycle)
+- [Local REST API Reference](#local-rest-api-reference)
+- [App Screens](#app-screens)
+- [Security & Backup Protection](#security--backup-protection)
 - [Installation](#installation)
-- [Security](#-security)
 - [Requirements](#requirements)
-- [Build from Source](#build-from-source)
+- [Build & Test from Source](#build--test-from-source)
 - [Tech Stack](#tech-stack)
 
 ---
 
-## What is NeuralLite?
+## Overview
 
-NeuralLite is an Android app that hosts a full **HTTP inference server** directly on your phone. It runs quantized large language models (GGUF format via **llama.cpp**) entirely on-device and exposes them through an **OpenAI-compatible REST API** on your local Wi-Fi network.
+**NeuralLite** (`com.neurallite.app`) packages a native `llama.cpp` inference engine (`libllama_android.so`) inside an Android Foreground Service and exposes an **OpenAI-compatible HTTP server** (`NanoHTTPD`) on your local network (default port `8080`).
 
-This means any tool, script, or application that already speaks the OpenAI API protocol — from `curl` to Open WebUI to LangChain — can use your phone as its AI backend, **with zero cloud dependency**.
+Any tool that speaks the OpenAI protocol — `curl`, the official Python/JS `openai` SDKs, Open WebUI, or LangChain — can target your phone's LAN IP and receive non-streaming completions or real-time Server-Sent Events (SSE) token streams.
 
 ---
 
 ## Key Features
 
-| Feature | Description |
+| Capability | Details |
 |---|---|
-| 📡 **Phone as AI Server** | Runs a full HTTP server on port `8080`, reachable from any device on your Wi-Fi LAN |
-| 🤖 **OpenAI-Compatible API** | `/v1/chat/completions`, `/v1/completions`, `/v1/models` — drop-in compatible with standard SDKs |
-| ⚡ **Streaming Responses (SSE)** | Real-time token streaming via Server-Sent Events, just like ChatGPT |
-| 🧠 **llama.cpp Native Engine** | JNI-powered C++ inference through `libllama_android.so` — maximum performance |
-| 🔒 **Auto-Generated Bearer Token** | Encrypted per-device API key stored with `EncryptedSharedPreferences` (AES-256) |
-| 📶 **mDNS / Bonjour Discovery** | Automatically broadcasts as `_neurallite._tcp` so other LAN devices can discover it |
-| 🔋 **Foreground Service + Wake/Wi-Fi Locks** | Server stays alive with screen off; no battery or Wi-Fi suspension |
-| 🎯 **Hardware Tier Detection** | Scans RAM, CPU cores, and ABI — recommends the right model for your device |
-| 📦 **Built-in Model Catalog** | One-tap download of TinyLlama, Phi-2, Gemma, Mistral-7B, Llama-3-8B from HuggingFace |
-| 🌗 **Dark Neon UI (Jetpack Compose)** | Material 3 with cyan/green accents, animated pulse indicators, live request log |
+| **OpenAI-Compatible REST API** | `GET /health`, `GET /v1/models`, `GET /v1/models/neurallite-local`, `POST /v1/chat/completions`, `POST /v1/completions`, and `OPTIONS *` |
+| **SSE Streaming & Disconnect Abort** | Non-gzipped `text/event-stream` chunked responses with `finish_reason`, optional `stream_options.include_usage`, and immediate inference cancellation if the client drops the socket |
+| **Native `llama.cpp` (`b3248`) JNI Engine** | CPU-optimized `libllama_android.so` with `EngineCoordinator` mutex serialization, UTF-8 `ByteArray` JNI transport, chunked prompt batching (`<= 512` tokens/step), and `n_ctx` overflow protection |
+| **Model-Aware Chat Templates** | Automatic formatting and stop-sequence filtering for `ZEPHYR`, `PHI2`, `GEMMA`, `MISTRAL_V1`, and `LLAMA3` (including OpenAI `developer` role mapping and content-part arrays) |
+| **Hardware Detection & Tiering** | Reads total/available RAM, CPU cores, ABI, free storage, API level, and offscreen EGL GPU renderer; classifies devices into Tiers 1–4 and caches the profile |
+| **Curated GGUF Model Manager** | Wi-Fi `DownloadManager` downloads with live progress, pause notes, cancellation, GGUF header/size validation, sequential model switching, unload, and per-model or bulk deletion |
+| **Persistent Foreground Server** | `dataSync` foreground service with configurable Port, CORS, mDNS (`_neurallite._tcp.`), Wi-Fi High-Perf lock, Partial Wake Lock, and ongoing notification with Stop action |
+| **Encrypted Bearer Auth** | Auto-generated UUID v4 token stored in `EncryptedSharedPreferences` (`AES256_SIV` / `AES256_GCM`), excluded from cloud backups, with live in-place token rotation |
+| **4-Tab Dark Neon Compose UI** | Material 3 UI (`Detect`, `Models`, `Server`, `Config`) with persisted settings, real LAN IP display, live request/throughput counters, and a rolling 50-entry color-coded request log |
 
 ---
 
 ## Architecture
 
-![NeuralLite Architecture](architecture_diagram.png)
+<div align="center">
+  <img src="architecture_diagram.png" alt="NeuralLite Architecture" width="540"/>
+</div>
 
-NeuralLite's architecture has three layers:
+```text
+NeuralLite/
+├── app/
+│   ├── build.gradle.kts                      # AGP 8.4 / Kotlin 2.0 / Compose / CMake 3.22.1
+│   ├── proguard-rules.pro                    # Keeps LlamaEngine native methods & TokenCallback
+│   └── src/
+│       ├── main/
+│       │   ├── AndroidManifest.xml           # Permissions, MainActivity, dataSync service, backup rules
+│       │   ├── cpp/
+│       │   │   ├── CMakeLists.txt            # Compiles libllama_android.so (-O3, CPU-only)
+│       │   │   ├── llama_bridge.cpp          # UTF-8 byte JNI bridge, chunked decode, stop_flag
+│       │   │   └── llama/                    # Vendored llama.cpp (tag b3248) sources
+│       │   ├── java/com/neurallite/app/
+│       │   │   ├── NeuralliteApp.kt          # Lightweight Application entry point
+│       │   │   ├── MainActivity.kt           # Dark edge-to-edge Scaffold & 4-tab NavHost
+│       │   │   ├── engine/LlamaEngine.kt     # EngineCoordinator (Mutex + AtomicLong + JNI)
+│       │   │   ├── hardware/HardwareScanner.kt # EGL GPU, RAM/CPU/Storage scan & Tier 1-4
+│       │   │   ├── models/
+│       │   │   │   ├── ModelCatalog.kt       # 5 GGUF entries + PromptTemplate definitions
+│       │   │   │   └── ModelManager.kt       # DownloadManager, GGUF checks, load/switch/delete
+│       │   │   ├── server/
+│       │   │   │   ├── ServerEvent.kt        # RequestReceived, RequestCompleted, Lifecycle events
+│       │   │   │   ├── NeuralliteServer.kt   # NanoHTTPD router, UTF-8/chunked body, SSE pipe
+│       │   │   │   └── NeuralliteServerService.kt # Foreground service, NSD, locks, TokenStore
+│       │   │   ├── ui/                       # Dark Neon theme, components & 4 screen composables
+│       │   │   └── viewmodel/NeuralliteViewModel.kt # Persisted Config & reactive StateFlows
+│       │   └── res/xml/                      # backup_rules.xml & data_extraction_rules.xml
+│       ├── test/                             # 56 JVM unit tests (Engine, Hardware, Catalog, Server)
+│       └── androidTest/                      # Compose UI, service, and Config persistence tests
+├── payload.json                              # Sample chat completion request payload
+└── NeuralLite.apk                            # Pre-built ARM64 release APK
+```
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Android App                         │
-│  ┌──────────────┐   ┌──────────────┐   ┌────────────┐  │
-│  │ Jetpack      │   │ NeuralliteVM │   │ Hardware   │  │
-│  │ Compose UI   │──▶│ (ViewModel)  │──▶│ Scanner    │  │
-│  └──────────────┘   └──────┬───────┘   └────────────┘  │
-│                            │                            │
-│  ┌─────────────────────────▼──────────────────────────┐ │
-│  │        NeuralliteServerService (Foreground)        │ │
-│  │   Wi-Fi Lock · Wake Lock · mDNS · Notification    │ │
-│  └─────────────────────────┬──────────────────────────┘ │
-│                            │                            │
-│  ┌─────────────────────────▼──────────────────────────┐ │
-│  │        NeuralliteServer (NanoHTTPD on :8080)       │ │
-│  │  GET /health · GET /v1/models · POST /v1/chat/...  │ │
-│  └─────────────────────────┬──────────────────────────┘ │
-│                            │                            │
-│  ┌─────────────────────────▼──────────────────────────┐ │
-│  │           LlamaEngine (Kotlin singleton)           │ │
-│  │     loadModelSafe() · runInferenceSafe() (JNI)    │ │
-│  └─────────────────────────┬──────────────────────────┘ │
-│                            │                            │
-│  ┌─────────────────────────▼──────────────────────────┐ │
-│  │         libllama_android.so  (llama.cpp C++)       │ │
-│  └────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-             │  HTTP over Wi-Fi LAN (:8080)
-             ▼
-  ┌────────────────────┐  ┌──────────────────┐  ┌────────┐
-  │  Python / curl     │  │   Open WebUI     │  │  Any   │
-  │  scripts           │  │   LangChain      │  │  SDK   │
-  └────────────────────┘  └──────────────────┘  └────────┘
-```
+### Key Runtime Guarantees
+
+- **Serialized Inference Context:** `EngineCoordinator` guards model loading, unloading, and inference with a Kotlin `Mutex` and generation/handle barriers so parallel HTTP requests queue safely over the single native `llama_context`.
+- **Safe JNI String & Context Handling:** Prompts and streamed token chunks cross JNI as raw UTF-8 `ByteArray`s, preventing Modified UTF-8 / CESU-8 corruption and ART `NewStringUTF` crashes on emojis. Prompt decoding is chunked (`<= 512` tokens per `llama_decode`) and bounded by `n_ctx`.
+- **Correct HTTP/1.1 Keep-Alive & Chunked Framing:** `NeuralliteServer` reads `UTF-8` bodies directly (supporting both `Content-Length` and `Transfer-Encoding: chunked`), disables GZIP on `text/event-stream`, and drains or closes unread bodies on `400`/`401`/`503` responses so persistent connections never desync.
 
 ---
 
-## 📡 The Local AI Server
+## Hardware Detection & Tier System
 
-### How it works
+Tap **Run Hardware Scan** on the **Detect** tab to evaluate your device (`HardwareScanner` runs on `Dispatchers.IO`, detects the GPU via an offscreen `EGL10`/`GLES10` context, and caches the `HardwareProfile` in `SharedPreferences("neurallite_hardware")` for instant startup restoration):
 
-When you tap **Start** on the Server screen:
-
-1. `NeuralliteServerService` starts as a **foreground service** — it stays alive even with the screen off.
-2. A **Wi-Fi lock** (`WIFI_MODE_FULL_HIGH_PERF`) prevents the radio from sleeping.
-3. A **partial wake lock** keeps the CPU awake for inference.
-4. `NeuralliteServer` (built on [NanoHTTPD](https://github.com/NanoHttpd/nanohttpd)) binds to `0.0.0.0:8080`.
-5. The service registers itself via **mDNS** (`_neurallite._tcp`) so LAN devices can discover it automatically.
-6. A persistent **notification** appears with the server's IP and a "Stop Server" action button.
-
-The server shuts down cleanly when you tap **Stop** or dismiss the notification action — all locks are released and mDNS is unregistered.
-
-### API Reference
-
-![API Endpoints](api_endpoints.png)
-
-#### `GET /health` — Liveness probe *(no auth required)*
-
-```bash
-curl http://192.168.1.42:8080/health
-```
-```json
-{
-  "status": "ok",
-  "model": "TinyLlama 1.1B · Q8_0 · ctx=2048",
-  "uptime_seconds": 142
-}
-```
+| Tier | Label | Criteria (`1 GB = 1,073,741,824 B`) | Recommended Models |
+|---|---|---|---|
+| **Tier 1** | Flagship | `totalRAM >= 8 GB` AND `cpuCores >= 8` | Llama 3 8B, Mistral 7B |
+| **Tier 2** | Mid-range | `totalRAM >= 4 GB` AND `cpuCores >= 6` | Mistral 7B, Gemma 2B IT, Phi-2 2.7B |
+| **Tier 3** | Entry | `totalRAM >= 3 GB` AND `cpuCores >= 4` | TinyLlama 1.1B, Gemma 2B IT, Phi-2 2.7B |
+| **Tier 4** | Minimal | Below Tier 3 thresholds | TinyLlama 1.1B |
 
 ---
 
-#### `GET /v1/models` — List models *(auth required)*
+## Model Catalog & Lifecycle
 
-```bash
-curl http://192.168.1.42:8080/v1/models \
-  -H "Authorization: Bearer <your-token>"
-```
-```json
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "neurallite-local",
-      "object": "model",
-      "owned_by": "neurallite"
-    }
-  ]
-}
-```
+Models are downloaded from HuggingFace in GGUF format over unmetered Wi-Fi (`setAllowedOverMetered(false)`, `setAllowedOverRoaming(false)`) into `getExternalFilesDir("models")`:
+
+| ID | Display Name | Size | RAM Req | Est. Speed | Tiers | Context | Template |
+|---|---|---|---|---|---|---|---|
+| `tinyllama_1b_q8` | **TinyLlama 1.1B** (`Q8_0`) | 1.1 GB | 1.5 GB | ~25 tok/s | 4, 3 | 2048 | `ZEPHYR` |
+| `phi2_q4km` | **Phi-2 2.7B** (`Q4_K_M`) | 1.6 GB | 3.0 GB | ~12 tok/s | 3, 2 | 2048 | `PHI2` |
+| `gemma2b_q4ks` | **Gemma 2B IT** (`Q4_K_S`) | 1.3 GB | 2.5 GB | ~15 tok/s | 3, 2 | 4096 | `GEMMA` |
+| `mistral7b_q3km` | **Mistral 7B Instruct** (`Q3_K_M`) | 3.1 GB | 5.5 GB | ~6 tok/s | 1, 2 | 8192 | `MISTRAL_V1` |
+| `llama3_8b_q4km` | **Llama 3 8B Instruct** (`Q4_K_M`) | 4.9 GB | 7.0 GB | ~5 tok/s | 1 | 8192 | `LLAMA3` |
+
+`ModelManager` reconciles active, failed, and completed `DownloadManager` entries on startup, verifies the `GGUF` magic header and byte length, supports cancelling in-flight downloads, unloading active models, sequential model switching, and deleting individual or all models.
 
 ---
 
-#### `POST /v1/chat/completions` — Chat inference *(auth required)*
+## Local REST API Reference
 
-Supports both **streaming** (`"stream": true`) and **non-streaming** modes.
+<div align="center">
+  <img src="api_endpoints.png" alt="NeuralLite API Endpoints" width="540"/>
+</div>
+
+### Authentication & Headers
+
+- `GET /health` and `OPTIONS *` require **no** authentication.
+- All `/v1/*` routes require `Authorization: Bearer <token>` (case-insensitive `Bearer` scheme); invalid or missing tokens return `401 Unauthorized` (`{"error":"unauthorized"}`).
+- When **CORS Headers** is enabled in **Config**, responses include:
+  - `Access-Control-Allow-Origin: *`
+  - `Access-Control-Allow-Methods: GET,POST,OPTIONS`
+  - `Access-Control-Allow-Headers: Authorization,Content-Type`
+
+### Endpoints
+
+| Method & Path | Auth | Behavior |
+|---|---|---|
+| `GET /health` | No | Returns `status` (`"ok"`), `model` (native JSON metadata or `null`), and `uptime_seconds` |
+| `GET /v1/models` | Bearer | Returns OpenAI model list containing `"neurallite-local"` |
+| `GET /v1/models/neurallite-local` | Bearer | Returns metadata object for `"neurallite-local"` |
+| `POST /v1/chat/completions` | Bearer | Accepts `messages` (`role`, string or `[{"type":"text","text":...}]` `content`), `max_tokens` / `max_completion_tokens`, `temperature`, `stop` (string or array), `stream` (`true`/`false`), and `stream_options.include_usage`. Returns `503` if no model is loaded, `400` on invalid payloads or prompt `context_overflow`, and real `usage` token counts. |
+| `POST /v1/completions` | Bearer | Legacy text completion supporting `prompt` (string or non-empty string array), `max_tokens` / `max_completion_tokens`, `temperature`, `stop`, `stream` (`true`/`false`), and `stream_options.include_usage`. |
+| `OPTIONS *` | No | CORS preflight responder (`200 OK`) |
+
+### Client Examples
+
+#### `curl` via ADB Port Forwarding
 
 ```bash
-curl http://192.168.1.42:8080/v1/chat/completions \
+adb forward tcp:8080 tcp:8080
+curl http://localhost:8080/health
+curl http://localhost:8080/v1/chat/completions \
   -H "Authorization: Bearer <your-token>" \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "neurallite-local",
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user",   "content": "What is the capital of France?"}
-    ],
-    "max_tokens": 256,
-    "temperature": 0.7,
-    "stream": false
-  }'
+  -d @payload.json
 ```
 
-**Response:**
-```json
-{
-  "id": "chatcmpl-a3f1b2c4",
-  "object": "chat.completion",
-  "model": "neurallite-local",
-  "choices": [{
-    "index": 0,
-    "message": { "role": "assistant", "content": "The capital of France is Paris." },
-    "finish_reason": "stop"
-  }]
-}
-```
-
-**Streaming (`"stream": true`) — Server-Sent Events:**
-```
-data: {"id":"chatcmpl-a3f1b2c4","choices":[{"delta":{"content":"The"},...}]}
-data: {"id":"chatcmpl-a3f1b2c4","choices":[{"delta":{"content":" capital"},...}]}
-data: [DONE]
-```
-
----
-
-#### `POST /v1/completions` — Legacy text completion *(auth required)*
-
-```bash
-curl http://192.168.1.42:8080/v1/completions \
-  -H "Authorization: Bearer <your-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Once upon a time", "max_tokens": 128}'
-```
-
----
-
-### Connecting from a PC / Script / Other App
-
-Because the API is **OpenAI-compatible**, you can point any existing OpenAI client at your phone with zero code changes — just change the `base_url` and `api_key`.
-
-#### Python (openai SDK)
+#### Python `openai` SDK (Over Wi-Fi LAN)
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://192.168.1.42:8080/v1",
-    api_key="paste-your-token-here"
+    base_url="http://<phone-lan-ip>:8080/v1",
+    api_key="<token-from-server-screen>",
 )
 
-response = client.chat.completions.create(
+stream = client.chat.completions.create(
     model="neurallite-local",
-    messages=[{"role": "user", "content": "Explain quantum entanglement simply."}],
-    stream=True
+    messages=[
+        {"role": "system", "content": "You are concise."},
+        {"role": "user", "content": "Explain quantization in two sentences."},
+    ],
+    temperature=0.7,
+    max_tokens=256,
+    stream=True,
 )
 
-for chunk in response:
+for chunk in stream:
     print(chunk.choices[0].delta.content or "", end="", flush=True)
 ```
 
-#### Open WebUI
+#### Open WebUI & LangChain
 
-1. Install [Open WebUI](https://github.com/open-webui/open-webui) on your PC.
-2. Go to **Settings → Connections → OpenAI API**.
-3. Set **API URL** to `http://<phone-ip>:8080/v1`.
-4. Set **API Key** to your NeuralLite token.
-5. Select `neurallite-local` from the model dropdown.
-
-#### LangChain
-
-```python
-from langchain_openai import ChatOpenAI
-
-llm = ChatOpenAI(
-    base_url="http://192.168.1.42:8080/v1",
-    api_key="paste-your-token-here",
-    model="neurallite-local"
-)
-
-print(llm.invoke("Write a haiku about Android."))
-```
+- **Open WebUI:** **Settings -> Connections -> OpenAI API** -> URL `http://<phone-lan-ip>:8080/v1`, API Key `<your-token>`, model `neurallite-local`.
+- **LangChain:** Initialize `ChatOpenAI(base_url="http://<phone-lan-ip>:8080/v1", api_key="<your-token>", model="neurallite-local")`.
 
 ---
 
-## 🧠 On-Device LLM Engine
+## App Screens
 
-`LlamaEngine` is a Kotlin singleton that wraps the native **llama.cpp** library via JNI (`libllama_android.so`).
-
-```
-loadModelSafe(modelPath, nThreads, nCtx)
-    │
-    ├─ Unloads any existing model first (AtomicLong handle)
-    ├─ Calls JNI loadModel() → returns native handle
-    └─ Fetches model metadata via getModelInfo()
-
-runInferenceSafe(prompt, maxTokens, temperature, onToken)
-    │
-    ├─ Runs entirely on Dispatchers.IO (never blocks UI)
-    ├─ onToken callback → each generated token streamed live
-    └─ Full response returned as String when complete
-```
-
-Key design decisions:
-- The native handle is stored in an `AtomicLong` — safe for concurrent access without locks.
-- Thread count defaults to `availableProcessors() / 2` (capped at minimum 2) to avoid thermal throttling.
-- Context window (`nCtx`) defaults to 2048 — configurable per model.
-- Errors surface via a `StateFlow<LlamaError?>` so the UI reacts reactively.
+1. **Detect:** One-tap animated radar scan, color-coded Hardware Tier card (`Tier 1`–`Tier 4`), equal-height 2x2 metric grid (`Total RAM`, `CPU Cores`, `GPU`, `Free Storage`), **Model Capability Range** bar, and device details (`ABI`, `API Level`, `Available RAM`).
+2. **Models:** Reactive storage bar (`GB used · GB free`), scan prompt when hardware hasn't been scanned yet, dismissible engine error banner, tier-sorted catalog cards with **Best Match** and non-blocking **Insufficient RAM** chips, and full download/cancel/load/unload/switch/delete controls.
+3. **Server:** Pulsing Start/Stop button (prompts for `POST_NOTIFICATIONS` on Android 13+), active model status, conditional **Stop Active Inference** control during generation, tap-to-copy `Local` and real `LAN` endpoint URLs, masked/copyable/regenerable Bearer API token, cumulative `Requests` and `Avg tok/s` metrics, and a rolling 50-entry color-coded **Request Log** (`HH:mm:ss · METHOD /path · STATUS · XXms`) with **Clear**.
+4. **Config:** Persisted **Inference** (`Context Window`, `CPU Threads`, `Temperature`, `Max Tokens`) and **Server** (`Port` `1024–65535`, `CORS Headers`, `mDNS / Bonjour`, `Wake Lock`) settings, pending reload/restart hints, **App Info**, and **Clear All Models** danger zone.
 
 ---
 
-## 🎯 Hardware Detection & Tier System
+## Security & Backup Protection
 
-Before choosing a model, NeuralLite scans your device and assigns it a **performance tier**:
-
-| Tier | Label | RAM | CPU Cores | Recommended Models |
-|------|-------|-----|-----------|-------------------|
-| 1 | 🟢 Flagship | ≥ 8 GB | ≥ 8 | Llama 3 8B, Mistral 7B |
-| 2 | 🔵 Mid-range | ≥ 4 GB | ≥ 6 | Mistral 7B, Phi-2, Gemma 2B |
-| 3 | 🟡 Entry | ≥ 3 GB | ≥ 4 | Phi-2, Gemma 2B, TinyLlama |
-| 4 | 🔴 Minimal | < 3 GB | < 4 | TinyLlama 1.1B only |
-
-The scan reads: **total RAM**, **available RAM**, **CPU core count**, **CPU ABI** (`arm64-v8a`, etc.), **free storage**, and **Android API level**. Results are cached in `SharedPreferences` so subsequent launches are instant.
-
-The **Capability Bar** in the Detect screen visually shows exactly which models are reachable on your current hardware.
-
----
-
-## 📦 Model Catalog
-
-All models are downloaded from HuggingFace in **GGUF** format. Storage usage is tracked live with a progress bar.
-
-| Model | Size | RAM | Tok/s (est.) | Tiers | Tags |
-|-------|------|-----|-------------|-------|------|
-| **TinyLlama 1.1B** Q8_0 | 1.1 GB | 1.5 GB | ~25 | 3, 4 | ultra-light, chat |
-| **Phi-2 2.7B** Q4_K_M | 1.6 GB | 3.0 GB | ~12 | 2, 3 | chat, code, instruct |
-| **Gemma 2B IT** Q4_K_S | 1.3 GB | 2.5 GB | ~15 | 2, 3 | instruct, chat |
-| **Mistral 7B Instruct** Q3_K_M | 3.1 GB | 5.5 GB | ~6 | 1, 2 | instruct, chat, powerful |
-| **Llama 3 8B Instruct** Q4_K_M | 4.9 GB | 7.0 GB | ~5 | 1 | instruct, chat, powerful |
-
-Each model card shows:
-- Download / Load / Delete actions
-- Live download progress bar
-- ⚠️ RAM warning if device RAM is insufficient
-- ✅ "Recommended" badge if the model matches your tier
-
----
-
-## 📱 App Screens
-
-![App Screens](app_screens.png)
-
-The app has **4 screens** accessible via the bottom navigation bar:
-
-### 1. Detect — Hardware Scan
-Tap the radar button to scan your device. Your hardware tier is displayed with a color-coded badge and a capability bar showing which models are accessible.
-
-### 2. Models — Model Manager
-Browse the model catalog, download models directly from HuggingFace, load/unload them into the inference engine, and monitor storage usage.
-
-### 3. Server — API Control Panel
-- **Start / Stop** the HTTP server with a single tap (animated pulse when running).
-- View **Local** (`localhost:8080/v1`) and **LAN** (`192.168.x.x:8080/v1`) endpoint URLs (tap to copy).
-- **View / Copy / Regenerate** the Bearer API token.
-- **Live metrics**: total request count, average tokens per second.
-- **Request log**: scrollable list of the last 50 API calls with status codes and latency.
-
-### 4. Config — Settings
-App-level configuration options.
+- **Bearer Token Storage:** Tokens are generated via `UUID.randomUUID()` and stored in `EncryptedSharedPreferences` (`neurallite_secure_prefs`) using `MasterKey` (`AES256_GCM`) with `AES256_SIV` keys and `AES256_GCM` values, plus automatic recovery if keystore state mismatches occur.
+- **Backup Exclusion:** `neurallite_secure_prefs.xml` is explicitly excluded in [backup_rules.xml](app/src/main/res/xml/backup_rules.xml) and [data_extraction_rules.xml](app/src/main/res/xml/data_extraction_rules.xml).
+- **Live Rotation:** Tapping **Regenerate** on the **Server** tab updates the encrypted token and immediately rotates the active server's accepted credential without restarting the socket.
+- **LAN Scope Warning:** When running, the server binds to `0.0.0.0`. Avoid running NeuralLite on untrusted public Wi-Fi networks.
 
 ---
 
 ## Installation
 
-Download the latest APK directly and sideload it:
-
-**[⬇ Download NeuralLite.apk](NeuralLite.apk)**
-
-> **Note:** You will need to enable *"Install from unknown sources"* in your Android settings. Go to **Settings → Apps → Special app access → Install unknown apps** and allow your file manager or browser.
-
-**Steps:**
-1. Download `NeuralLite.apk` to your phone.
-2. Open it with your file manager and tap **Install**.
-3. Grant the requested permissions (storage, notifications).
-4. Open the app → **Detect** tab → tap **Run Hardware Scan**.
-5. Go to **Models** → download a model suited to your tier.
-6. Go to **Server** → tap the power button to **Start**.
-7. Copy the LAN URL and API token, then connect from any device on your Wi-Fi.
-
----
-
-## 🔒 Security
-
-| Concern | How NeuralLite handles it |
-|---------|--------------------------|
-| **API Authentication** | Every `/v1/...` route requires a `Authorization: Bearer <token>` header |
-| **Token Generation** | UUID v4 token generated on first server start |
-| **Token Storage** | Stored in `EncryptedSharedPreferences` with AES-256-GCM encryption |
-| **Token Rotation** | Tap "Regenerate" in the Server screen to invalidate and replace |
-| **CORS** | All responses include `Access-Control-Allow-Origin: *` for browser clients |
-| **Network Scope** | Server binds to `0.0.0.0` — accessible on LAN only (no internet exposure) |
-
-> ⚠️ **Do not run NeuralLite on public Wi-Fi networks.** The server is accessible to anyone on the same network who has the token.
+1. Sideload **[NeuralLite.apk](NeuralLite.apk)** onto an ARM64 Android device (`Android 8.0+` / API 26+, *"Install from unknown apps"* enabled). *(Note: the bundled `NeuralLite.apk` is signed with a debug certificate for sideloading/testing.)*
+2. Open **NeuralLite** -> **Detect** -> tap the radar button to **Run Hardware Scan**.
+3. Open **Models** -> download a model suited to your tier -> tap **Load Model**.
+4. Open **Server** -> tap **Start** (grant notification permission if prompted on Android 13+).
+5. Copy the **LAN** URL and **API Token** into your client.
 
 ---
 
 ## Requirements
 
-- **Android 8.0** (API 26) or higher
-- **ARM64** device (`arm64-v8a` ABI)
-- **Wi-Fi** connection for LAN API access
-- **Storage** space for GGUF models (1.1 GB – 5 GB per model)
-- **RAM** ≥ 2 GB (more is better — see tier table above)
+- **OS:** Android 8.0 (API 26) or higher (`targetSdk = 34`)
+- **CPU ABI:** `arm64-v8a` for release builds (`debug` builds include both `arm64-v8a` and `x86_64`)
+- **Storage:** 1.1 GB – 5+ GB free space depending on downloaded GGUF models
+- **RAM:** 2+ GB minimum (1.5 GB – 7+ GB required depending on model; see catalog table)
+- **Network:** Local Wi-Fi (or USB `adb forward`) for client access
 
 ---
 
-## Build from Source
+## Build & Test from Source
 
-```bash
-# Clone the repository
-git clone https://github.com/bitxwolf/NeuralLite.git
-cd NeuralLite
+Requires **JDK 17**, **Android SDK Platform 34**, **NDK**, and **CMake 3.22.1**.
 
-# Open in Android Studio (Hedgehog or newer recommended)
-# Or build via Gradle:
-./gradlew assembleRelease
+```powershell
+# Build debug APK (arm64-v8a + x86_64)
+.\gradlew.bat assembleDebug
+
+# Build release APK (arm64-v8a)
+.\gradlew.bat assembleRelease
+
+# Run JVM unit tests (56 tests across Engine, Hardware, Catalog, ModelManager, Server)
+.\gradlew.bat testDebugUnitTest
+
+# Run Android instrumented UI & service tests (requires attached device/emulator)
+.\gradlew.bat connectedDebugAndroidTest
+
+# Run Android Lint
+.\gradlew.bat lintDebug
 ```
-
-The native `libllama_android.so` is pre-compiled and included in the APK. If you need to recompile llama.cpp for Android, see the [llama.cpp Android build guide](https://github.com/ggerganov/llama.cpp/blob/master/docs/android.md).
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| UI | Jetpack Compose · Material 3 |
-| Architecture | MVVM · StateFlow · Coroutines |
-| HTTP Server | NanoHTTPD (embedded, zero-dependency) |
-| Inference | llama.cpp via JNI (`libllama_android.so`) |
-| Encryption | AndroidX Security · EncryptedSharedPreferences (AES-256) |
-| Network Discovery | Android NSD (mDNS / DNS-SD) |
-| Model Downloads | Android DownloadManager |
-| Language | Kotlin 100% |
-
----
-
-<div align="center">
-  <p>Made with ❤️ by <a href="https://github.com/bitxwolf">bitxwolf</a></p>
-  <p><em>Your phone. Your model. Your API.</em></p>
-</div>
+|---|---|
+| **UI** | Jetpack Compose · Material 3 · Navigation Compose |
+| **Architecture** | MVVM · Coroutines · `StateFlow` / `SharedFlow` |
+| **HTTP Server** | NanoHTTPD `2.3.1` |
+| **Native Inference** | `llama.cpp` (`tag b3248`) via JNI (`libllama_android.so`) |
+| **Security** | AndroidX Security `security-crypto` (`EncryptedSharedPreferences`) |
+| **Discovery & Background** | Android NSD (`_neurallite._tcp.`) · `dataSync` Foreground Service · `DownloadManager` |
+| **Build** | Gradle `8.7` · AGP `8.4.0` · Kotlin `2.0.0` · CMake `3.22.1` |
